@@ -111,6 +111,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90fdc19fded724a15bf859b3d1515c93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  lerpFactor: 10
 --- !u!135 &13500000
 SphereCollider:
   m_ObjectHideFlags: 1
@@ -130,8 +131,8 @@ NetworkView:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 100000}
   m_Enabled: 1
-  m_StateSynchronization: 1
-  m_Observed: {fileID: 400000}
+  m_StateSynchronization: 2
+  m_Observed: {fileID: 11400002}
   m_ViewID:
     m_ID: 0
     m_Type: 0
