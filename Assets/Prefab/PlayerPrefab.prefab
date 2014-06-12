@@ -112,6 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   lerpFactor: 10
+  interpolationBackTime: .100000001
 --- !u!135 &13500000
 SphereCollider:
   m_ObjectHideFlags: 1
@@ -131,7 +132,7 @@ NetworkView:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 100000}
   m_Enabled: 1
-  m_StateSynchronization: 2
+  m_StateSynchronization: 0
   m_Observed: {fileID: 11400002}
   m_ViewID:
     m_ID: 0
