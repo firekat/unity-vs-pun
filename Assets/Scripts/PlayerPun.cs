@@ -4,6 +4,13 @@ using System.Collections;
 public class PlayerPun : Photon.MonoBehaviour
 {
   public float MoveSpeed = 5f;
+
+  [System.NonSerialized]
+  public float horizAxis = 0f;
+
+  [System.NonSerialized]
+  public float vertAxis = 0f;
+
   void Start()
   {
     if (photonView == null || photonView.isMine)
@@ -19,10 +26,17 @@ public class PlayerPun : Photon.MonoBehaviour
   // Update is called once per frame
   void Update()
   {
-    if (photonView == null || photonView.isMine)
+    if (photonView.isMine)
     {
-      transform.Translate(new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")));
+      horizAxis = Input.GetAxis("Horizontal");
+      vertAxis = Input.GetAxis("Vertical");
     }
+  }
+
+  public void Simulate()
+  {
+    // NOTE: this is called from a fixed update, hence fixedDeltaTime??
+    transform.Translate(new Vector3(horizAxis, 0, vertAxis) * MoveSpeed * Time.fixedDeltaTime);
   }
 }
 
