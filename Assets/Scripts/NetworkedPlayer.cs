@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class NetworkedPlayer : MonoBehaviour
 {
@@ -8,14 +9,25 @@ public class NetworkedPlayer : MonoBehaviour
 
   public float interpolationBackTime = 0.1f;
 
-  // private Vector3 lastReceievedPosition;
   private NetworkState[] stateBuffer = new NetworkState[20];
   private int stateCount;
 
-//  void Start()
-//  {
-//    lastReceievedPosition = transform.position;
-//  }
+  /// <summary>
+  /// The history of move states send from client to server
+  /// </summary>
+  private List<MoveStruct> moveHistory = new List<MoveStruct>();
+
+  /// <summary>
+  /// Cached player object
+  /// </summary>
+  private Player playerObject;
+
+  private float updateTimer = 0f;
+
+  void Start()
+  {
+    playerObject = GetComponent<Player>();
+  }
 
   void OnSerializeNetworkView(BitStream stream, NetworkMessageInfo info)
   {
@@ -35,8 +47,115 @@ public class NetworkedPlayer : MonoBehaviour
     }
   }
 
+  void FixedUpdate()
+  {
+    if (networkView.isMine)
+    {
+      MoveStruct moveState = new MoveStruct(playerObject.horizAxis, playerObject.vertAxis, Network.time);
+
+      // buffer move state
+      moveHistory.Insert(0, moveState);
+
+      // TODO: parameterise this
+      if (moveHistory.Count > 200)
+      {
+        moveHistory.RemoveAt(moveHistory.Count - 1);
+      }
+
+      playerObject.Simulate();
+
+      // send state to server?
+      networkView.RPC("ProcessInput", RPCMode.Server, moveState.HorizontalAxis, moveState.VecticalAxis, transform.position);
+    }
+  }
+
+  /// <summary>
+  /// Receives input from the client
+  /// </summary>
+  /// <param name="horizAxis">Horiz axis.</param>
+  /// <param name="vertAxis">Vert axis.</param>
+  /// <param name="possie">Possie.</param>
+  /// <param name="info">Info.</param>
+  [RPC]
+  void ProcessInput(float horizAxis, float vertAxis, Vector3 possie, NetworkMessageInfo info)
+  {
+    if (networkView.isMine || !Network.isServer)
+    {
+      return;
+    }
+
+    // execute input
+    playerObject.horizAxis = horizAxis;
+    playerObject.vertAxis = vertAxis;
+    playerObject.Simulate();
+
+    // compare the results
+    // TODO: make this configurable, consider using sqrt dist?
+    if (Vector3.Distance(transform.position, possie) > 0.1f)
+    {
+      Debug.Log("Correcting input: " + possie);
+      networkView.RPC("CorrectState", info.sender, transform.position);
+    }
+  }
+
+  /// <summary>
+  /// Sent from the server to client when they are out of sync
+  /// </summary>
+  /// <param name="correctPossie">Correct possie.</param>
+  /// <param name="info">Info.</param>
+  [RPC]
+  void CorrectState(Vector3 correctPossie, NetworkMessageInfo info)
+  {
+    int pastState = 0;
+    // TODO: convert to LINQ?
+    for (int i = 0; i < moveHistory.Count; i++)
+    {
+      if (moveHistory[i].Timestamp <= info.timestamp)
+      {
+        pastState = i;
+        break;
+      }
+    }
+
+    // rewind
+    transform.position = correctPossie;
+
+    // replay
+    for (int i = pastState; i>= 0; i--)
+    {
+      playerObject.horizAxis = moveHistory[i].HorizontalAxis;
+      playerObject.vertAxis = moveHistory[i].VecticalAxis;
+      playerObject.Simulate();
+    }
+
+    // clear the move history??
+    moveHistory.Clear();
+  }
+
+  [RPC]
+  void NetUpdate(Vector3 possie, NetworkMessageInfo info)
+  {
+    if (!networkView.isMine)
+    {
+      SaveBuffer(new NetworkState(possie, info.timestamp));
+    }
+  }
+
   void Update()
   {
+    // if this is the server, send out position updates every nth of a second
+    if (Network.isServer)
+    {
+      updateTimer += Time.deltaTime;
+      // TODO: again, make this configurable??
+      if (updateTimer >= 0.1f)
+      {
+        updateTimer = 0f;
+        networkView.RPC("NetUpdate", RPCMode.Others, transform.position);
+      }
+      return;
+    }
+
     if (networkView.isMine || stateCount == 0)
     {
       return;
@@ -91,6 +210,20 @@ public class NetworkedPlayer : MonoBehaviour
     {
       this.position = pos;
       this.timestamp = time;
+    }
+  }
+
+  private struct MoveStruct
+  {
+    public float HorizontalAxis;
+    public float VecticalAxis;
+    public double Timestamp;
+
+    public MoveStruct(float horiz, float vert, double timestamp)
+    {
+      this.HorizontalAxis = horiz;
+      this.VecticalAxis = vert;
+      this.Timestamp = timestamp;
     }
   }
 }

@@ -4,6 +4,13 @@ using System.Collections;
 public class Player : MonoBehaviour
 {
   public float MoveSpeed = 5f;
+
+  [System.NonSerialized]
+  public float horizAxis = 0f;
+
+  [System.NonSerialized]
+  public float vertAxis = 0f;
+
   void Start()
   {
     if (networkView == null || networkView.isMine)
@@ -19,9 +26,15 @@ public class Player : MonoBehaviour
   // Update is called once per frame
   void Update()
   {
-    if (networkView == null || networkView.isMine)
+    if (networkView.isMine)
     {
-      transform.Translate(new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")));
+      horizAxis = Input.GetAxis("Horizontal");
+      vertAxis = Input.GetAxis("Vertical");
     }
+  }
+
+  public void Simulate()
+  {
+    transform.Translate(new Vector3(horizAxis, 0, vertAxis) * MoveSpeed * Time.fixedDeltaTime);
   }
 }

@@ -25,4 +25,7 @@ MonoBehaviour:
   - InstantiateRpc
   - OnAwakeRPC
   - DestroyRpc
+  - ProcessInput
+  - CorrectState
+  - NetUpdate
   DisableAutoOpenWizard: 0
